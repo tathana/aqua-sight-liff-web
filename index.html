@@ -1,1 +1,111 @@
-"<!-- placeholder -->" 
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aqua Sight Selector</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; background:#ECF8F7; color:#065A6E; }
+    header { padding:16px 20px; background:#00A0BE; color:#fff; font-weight:700; }
+    .wrap { padding:16px 20px; display:grid; gap:16px; }
+    .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 6px 20px rgba(0,0,0,.06); }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    label { font-size:.9rem; opacity:.9; display:block; margin-bottom:6px; }
+    select, input[type="range"], .seg { width:100%; padding:10px; border:1px solid #d9eef0; border-radius:12px; }
+    .seg { display:flex; gap:8px; background:#ECF8F7; }
+    .seg button { flex:1; padding:10px; border:none; border-radius:10px; background:#d9eef0; color:#065A6E; font-weight:600; cursor:pointer; }
+    .seg button.active { background:#00A0BE; color:#fff; }
+    .cta { position:sticky; bottom:0; background:rgba(236,248,247,.9); padding:12px 20px; backdrop-filter:saturate(140%) blur(6px); }
+    .cta button { width:100%; padding:14px; border:none; border-radius:14px; background:#065A6E; color:#fff; font-weight:700; font-size:1rem; cursor:pointer; }
+    small { opacity:.75 }
+  </style>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <header>🌊 Aqua Sight — Selector</header>
+  <div class="wrap">
+    <div class="card row">
+      <div>
+        <label>Station</label>
+        <select id="station">
+          <option>LS01</option><option>LS03</option><option>TP01</option><option>TP04</option>
+          <option>TP11</option><option>PN01</option><option>SK01</option><option>SK06</option><option>CP01</option>
+        </select>
+      </div>
+      <div>
+        <label>Year</label>
+        <select id="year">
+          <option>2025</option><option selected>2024</option><option>2023</option><option>2022</option>
+          <option>2021</option><option>2020</option><option>2019</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card row">
+      <div>
+        <label>Atmospheric Correction (AC)</label>
+        <div class="seg" id="acSeg">
+          <button data-val="none">none</button>
+          <button data-val="full" class="active">full</button>
+        </div>
+      </div>
+      <div>
+        <label>Cloud %: <span id="cloudOut">30</span>%</label>
+        <input type="range" id="cloud" min="0" max="60" step="5" value="30" />
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Layer / Mode</label>
+      <div class="seg" id="modeSeg">
+        <button data-val="summary" class="active">Summary</button>
+        <button data-val="monthly">Monthly</button>
+        <button data-val="scenes">Scenes</button>
+      </div>
+      <small>เมื่อกด Apply ระบบจะส่งคำสั่งไปที่แชต LINE เช่น: <code>monthly LS01 2024 full 30</code></small>
+    </div>
+  </div>
+
+  <div class="cta"><button id="applyBtn">Apply & Send to Chat</button></div>
+
+  <script>
+    const LIFF_ID = "2008414768-j17Jr1PA"; // <-- ใส่ LIFF ID ของคุณ
+
+    const $ = (s)=>document.querySelector(s);
+    const station = $('#station'), year = $('#year');
+    const acSeg = $('#acSeg'), modeSeg = $('#modeSeg');
+    const cloud = $('#cloud'), cloudOut = $('#cloudOut');
+
+    const setSeg = (wrap, val)=>{
+      wrap.querySelectorAll('button').forEach(b=>{
+        b.classList.toggle('active', b.dataset.val===val);
+      });
+    };
+    const getSeg = wrap => (wrap.querySelector('button.active')?.dataset.val);
+
+    cloud.addEventListener('input', ()=> cloudOut.textContent = cloud.value);
+    acSeg.addEventListener('click', e=>{ if(e.target.dataset.val) setSeg(acSeg, e.target.dataset.val); });
+    modeSeg.addEventListener('click', e=>{ if(e.target.dataset.val) setSeg(modeSeg, e.target.dataset.val); });
+
+    async function init() {
+      await liff.init({ liffId: LIFF_ID });
+      if (liff.isLoggedIn() === false && !liff.isInClient()) {
+        liff.login();
+      }
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', async ()=>{
+      const cmd = `${getSeg(modeSeg)} ${station.value} ${year.value} ${getSeg(acSeg)} ${cloud.value}`;
+      try {
+        await liff.sendMessages([{ type:'text', text: cmd }]);
+        if (liff.isInClient()) liff.closeWindow();
+        else alert('ส่งข้อความแล้ว: ' + cmd);
+      } catch (e) {
+        alert('ส่งข้อความไม่สำเร็จ: ' + e);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
